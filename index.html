@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KrishiX – 15 Verified Labour Profiles, Squad Booking & Fine Protection</title>
+  <meta name="description" content="KrishiX Kopargaon: Browse 15 verified individual farm worker profiles with past experience, book full labour squads, file fine claims, view Kopargaon Leaderboard, and track live GPS dispatch.">
+  <link rel="stylesheet" href="./styles.css?v=2.0">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#14532D">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Socket.io for Real-Time GPS Tracker -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <!-- Razorpay SDK for Payments & Escrow -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .then(reg => console.log('🌾 KrishiX PWA Service Worker Registered!'))
+          .catch(err => console.log('PWA Reg failed:', err));
+      });
+    }
+  </script>
+</head>
+<body>
+
+<!-- ═══════════════════════ HEADER ═══════════════════════ -->
+<header class="app-header">
+  <div class="header-inner">
+    <!-- Clean transparent logo with no white box background -->
+    <div class="logo-wrap" onclick="window.krishixApp?.switchTab('profiles')">
+      <img src="./assets/krishix_logo.png" alt="KrishiX Logo" class="logo-img">
+      <span class="logo-tag">🌾 Smart Kopargaon Hub</span>
+    </div>
+
+    <div class="hdr-right">
+      <!-- Language buttons -->
+      <div class="pill-group">
+        <button class="pill-btn" id="lang-en" onclick="window.krishixApp?.setLanguage('en')">🇬🇧 English</button>
+        <button class="pill-btn" id="lang-hi" onclick="window.krishixApp?.setLanguage('hi')">🇮🇳 हिंदी</button>
+        <button class="pill-btn active" id="lang-mr" onclick="window.krishixApp?.setLanguage('mr')">🇮🇳 मराठी</button>
+      </div>
+
+      <!-- Native Kopargaon Voice Assistant -->
+      <button class="btn-voice" onclick="window.krishixApp?.speakPageSummary()">
+        🔊 कोपरगाव व्हॉईस असिस्टंट
+      </button>
+
+      <!-- Role switcher & OTP Auth -->
+      <div class="pill-group">
+        <button class="pill-btn active" id="role-farmer" onclick="window.krishixApp?.setRole('farmer')">👨‍🌾 Farmer</button>
+        <button class="pill-btn" id="role-provider" onclick="window.krishixApp?.setRole('provider')">🚜 Equipment Owner</button>
+      </div>
+
+      <!-- Wallet Balance Header Badge -->
+      <button class="btn-voice" id="hdr-wallet-badge" style="background:#16a34a;box-shadow:0 2px 8px rgba(22,163,74,.3);" onclick="window.krishixApp?.switchTab('payment')">
+        💳 Wallet: ₹4,850
+      </button>
+
+      <!-- Mobile OTP Login Button -->
+      <button class="btn-primary" id="btn-otp-login" style="padding: 7px 14px; font-size:13px;" onclick="window.krishixApp?.openOTPLoginModal()">
+        📱 Login with OTP
+      </button>
+      <span id="user-badge" style="display:none; background:#16a34a; color:#fff; font-size:12px; font-weight:700; padding:6px 12px; border-radius:20px; align-items:center; gap:6px;"></span>
+    </div>
+  </div>
+
+  <div class="vp-strip">
+    <div class="vp-inner">
+      <div>📍 <strong>Kopargaon Taluka (MH-17)</strong></div>
+      <div>👥 <strong>15 Verified Worker Profiles</strong></div>
+      <div>👨‍👩‍👧‍👦 <strong>Team Squad Booking</strong></div>
+      <div>🛡️ <strong>Interactive Fine & Escrow Protection</strong></div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════════════════ MAIN NAVIGATION ═══════════════════════ -->
+<nav class="main-nav">
+  <div class="nav-inner">
+    <button class="nav-tab active" id="tab-landing" onclick="window.krishixApp?.switchTab('landing')">
+      🏠 Intro Landing Page
+    </button>
+    <button class="nav-tab" id="tab-profiles" onclick="window.krishixApp?.switchTab('profiles')">
+      👥 Labour Profiles (15) <span class="nbadge" style="background:#16a34a;color:#fff;">Individual</span>
+    </button>
+    <button class="nav-tab" id="tab-team-squad" onclick="window.krishixApp?.switchTab('team-squad')">
+      👨‍👩‍👧‍👦 Team Squad Booking <span class="nbadge" style="background:#2563eb;color:#fff;">Whole Group</span>
+    </button>
+    <button class="nav-tab" id="tab-leaderboard" onclick="window.krishixApp?.switchTab('leaderboard')">
+      🏆 Kopargaon Leaderboard <span class="nbadge">Rankings</span>
+    </button>
+    <button class="nav-tab" id="tab-fines" onclick="window.krishixApp?.switchTab('fines')">
+      🛡️ Fine & Protection Hub <span class="nbadge" style="background:#dc2626;color:#fff;">Apply Fine</span>
+    </button>
+    <button class="nav-tab" id="tab-profit" onclick="window.krishixApp?.switchTab('profit')">
+      💡 Profit Maximizer AI
+    </button>
+    <button class="nav-tab" id="tab-ai-doctor" onclick="window.krishixApp?.switchTab('ai-doctor')">
+      🤖 AI Crop Doctor <span class="nbadge" style="background:#7c3aed;color:#fff;">AI Scan</span>
+    </button>
+    <button class="nav-tab" id="tab-planner" onclick="window.krishixApp?.switchTab('planner')">
+      🌱 Farm Operations Planner
+    </button>
+    <button class="nav-tab" id="tab-machinery" onclick="window.krishixApp?.switchTab('machinery')">
+      🚜 Machinery Booking
+    </button>
+    <button class="nav-tab" id="tab-tracking" onclick="window.krishixApp?.switchTab('tracking')">
+      📍 Live GPS Tracking <span class="live-dot"></span>
+    </button>
+    <button class="nav-tab" id="tab-schedule" onclick="window.krishixApp?.switchTab('schedule')">
+      📅 My Booked Jobs
+    </button>
+    <button class="nav-tab" id="tab-payment" onclick="window.krishixApp?.switchTab('payment')">
+      💳 Wallet & UPI
+    </button>
+    <button class="nav-tab" id="tab-provider" onclick="window.krishixApp?.switchTab('provider')" style="display:none;">
+      📊 Provider Dashboard
+    </button>
+  </div>
+</nav>
+
+<!-- ═══════════════════════ MAIN CONTENT ═══════════════════════ -->
+<main class="page">
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 0: INTRO LANDING PAGE (SEPARATE FULL-SCREEN VIEW)
+  ══════════════════════════════════════════════════════════ -->
+  <section id="view-landing" class="content-view active">
+    <!-- Hero Banner (Modern Mint Green Ecosystem) -->
+    <div class="hero-mint">
+      <div class="hero-mint-inner">
+        <div class="hero-mint-badge" data-i18n="hero-badge">🌾 Smart Kopargaon Agriculture Hub</div>
+        <h1 class="hero-mint-title">
+          The Digital Ecosystem for<br>
+          <span class="hero-mint-highlight">Modern Farming</span>
+        </h1>
+        <p class="hero-mint-sub" data-i18n="hero-sub">
+          Connect with skilled labourers, rent modern equipment, track live mandi prices, and grow your agricultural business—all in one unified platform.
+        </p>
+
+        <div class="hero-mint-btns">
+          <button class="btn-mint-primary" onclick="window.krishixApp?.switchTab('profiles')" data-i18n="get-started-btn">
+            Get Started →
+          </button>
+          <button class="btn-mint-secondary" onclick="window.krishixApp?.openRegisterModal()" data-i18n="learn-more-btn">
+            Learn More
+          </button>
+        </div>
+
+        <div class="hero-mint-trust">
+          <span class="trust-pill" data-i18n="trust-1">
+            ✓ 100% Verified Profiles
+          </span>
+          <span class="trust-pill" data-i18n="trust-2">
+            ✓ Real-time Pricing & Escrow
+          </span>
+          <span class="trust-pill" data-i18n="trust-3">
+            ✓ Secure Instant Payments
+          </span>
+        </div>
+
+        <!-- Inspiring Quote Box -->
+        <div class="quote-card">
+          <div class="quote-icon">“</div>
+          <blockquote class="quote-text" data-i18n="quote-text">
+            "Agriculture is the most healthful, most useful, and most noble employment of man. Our mission with KrishiX is to empower every farmer and farm worker with digital dignity, transparent pricing, and instant security."
+          </blockquote>
+          <div class="quote-author" data-i18n="quote-author">🌾 Kopargaon Agro Vision • Smart Farmers Ecosystem</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Action Grid -->
+    <div class="quick-grid">
+      <div class="quick-card" onclick="window.krishixApp?.switchTab('profiles')">
+        <div class="q-icon">👤</div>
+        <div>
+          <div class="q-title" data-i18n="qc-1-title">15 Individual Profiles</div>
+          <div class="q-desc" data-i18n="qc-1-desc">Personal details, past work experiences & custom worker count</div>
+        </div>
+      </div>
+      <div class="quick-card" onclick="window.krishixApp?.switchTab('team-squad')">
+        <div class="q-icon">👨‍👩‍👧‍👦</div>
+        <div>
+          <div class="q-title" data-i18n="qc-2-title">Team Squad Booking</div>
+          <div class="q-desc" data-i18n="qc-2-desc">Book 10-15 worker sugarcane, onion & wheat harvest gangs</div>
+        </div>
+      </div>
+      <div class="quick-card" onclick="window.krishixApp?.openFileFineModal()">
+        <div class="q-icon">⚖️</div>
+        <div>
+          <div class="q-title" data-i18n="qc-3-title">Apply Fine Claim</div>
+          <div class="q-desc" data-i18n="qc-3-desc">Apply fines for late arrival, no-show or crop/machine damage</div>
+        </div>
+      </div>
+      <div class="quick-card" onclick="window.krishixApp?.openRegisterModal()">
+        <div class="q-icon">➕</div>
+        <div>
+          <div class="q-title" data-i18n="qc-4-title">Worker Self-Registration</div>
+          <div class="q-desc" data-i18n="qc-4-desc">Register yourself to get booked by Kopargaon farmers</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 1: INDIVIDUAL LABOUR PROFILES DIRECTORY (15 Profiles)
+  ══════════════════════════════════════════════════════════ -->
+  <section id="view-profiles" class="content-view">
+    <!-- Header -->
+    <div class="sec-hdr">
+      <div>
+        <h2 data-i18n="hdr-profiles">👥 Kopargaon Labour Profiles Directory (15 Individual Profiles)</h2>
+        <p data-i18n="hdr-profiles-sub">Click any card to view personal details, past work experiences, farmer reviews, and book individual workers.</p>
+      </div>
+      <button class="btn-primary" onclick="window.krishixApp?.openRegisterModal()">
+        ➕ Register My Labour Profile
+      </button>
+    </div>
+
+    <!-- Stats row -->
+    <div class="stats-row">
+      <div class="stat-pill">
+        <div>
+          <div class="sp-val">15</div>
+          <div class="sp-lbl">Verified Profiles</div>
+        </div>
+      </div>
+      <div class="stat-pill">
+        <div>
+          <div class="sp-val">99.8%</div>
+          <div class="sp-lbl">Best Punctuality</div>
+        </div>
+      </div>
+      <div class="stat-pill">
+        <div>
+          <div class="sp-val">1,500+</div>
+          <div class="sp-lbl">Farm Jobs Completed</div>
+        </div>
+      </div>
+      <div class="stat-pill">
+        <div>
+          <div class="sp-val" id="profiles-count">15 Workers Found</div>
+          <div class="sp-lbl">Currently Showing</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter toolbar -->
+    <div class="filter-bar">
+      <div class="search-wrap">
+        🔍
+        <input type="text" id="profile-search-box" data-i18n="search-ph"
+          placeholder="Search by worker name, village, sugarcane, onion, spraying..."
+          oninput="window.krishixApp?.handleProfileSearch(this.value)">
+      </div>
+      <div class="chips">
+        <button class="chip skill-chip active" data-skill="ALL" onclick="window.krishixApp?.filterBySkill('ALL')">✨ All (15)</button>
+        <button class="chip skill-chip" data-skill="Sugarcane Cutting & Loading" onclick="window.krishixApp?.filterBySkill('Sugarcane Cutting & Loading')">🌾 Sugarcane</button>
+        <button class="chip skill-chip" data-skill="Onion Digging & Bagging" onclick="window.krishixApp?.filterBySkill('Onion Digging & Bagging')">🧅 Onion</button>
+        <button class="chip skill-chip" data-skill="Spraying & Pruning" onclick="window.krishixApp?.filterBySkill('Spraying & Pruning')">🧪 Spraying</button>
+        <button class="chip skill-chip" data-skill="Wheat Harvesting" onclick="window.krishixApp?.filterBySkill('Wheat Harvesting')">🌾 Wheat</button>
+        <button class="chip skill-chip" data-skill="Cotton Picking" onclick="window.krishixApp?.filterBySkill('Cotton Picking')">🪥 Cotton</button>
+        <button class="chip skill-chip" data-skill="Tractor Driver" onclick="window.krishixApp?.filterBySkill('Tractor Driver')">🚜 Driver</button>
+      </div>
+    </div>
+
+    <!-- 15 Profile Cards Grid -->
+    <div class="profiles-grid" id="profiles-grid"></div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 2: DEDICATED TEAM / SQUAD LABOUR BOOKING
+  ══════════════════════════════════════════════════════════ -->
+  <section id="view-team-squad" class="content-view">
+    <div class="sec-hdr">
+      <div>
+        <h2>👨‍👩‍👧‍👦 Team Squad Labour Booking (पूर्ण मजूर टोळी बुकिंग)</h2>
+        <p>Book entire organised worker gangs for large-scale sugarcane harvest, onion digging, wheat harvesting, and spraying drives.</p>
+      </div>
+    </div>
+
+    <div class="team-squad-grid" id="team-squad-grid"></div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 3: INTERACTIVE FINE & PROTECTION HUB
+  ══════════════════════════════════════════════════════════ -->
+  <section id="view-fines" class="content-view">
+    <div class="sec-hdr">
+      <div>
+        <h2>🛡️ Fine & Protection Hub (दंड व भरपाई व्यवस्था केंद्र)</h2>
+        <p>File a fine claim directly against workers for late arrival/no-show, or against farmers for machine misuse. Managed by KrishiX Escrow.</p>
+      </div>
+      <button class="btn-primary" style="background:#dc2626;" onclick="window.krishixApp?.openFileFineModal()">
+        ⚖️ Apply / File a Fine Claim
+      </button>
+    </div>
+
+    <!-- Apply Fine Banner Card -->
+    <div class="fine-claim-card">
+      <div class="fine-claim-hdr">
+        <div>
+          <h3>⚖️ Active Fine Claims & Escrow Protection Status</h3>
+          <p style="font-size:12px;color:#64748b;">Live claims currently being processed by Kopargaon KrishiX Escrow Officers.</p>
+        </div>
+        <button class="btn-primary" style="background:#dc2626;font-size:13px;padding:9px 16px;" onclick="window.krishixApp?.openFileFineModal()">
+          + File New Fine Claim
+        </button>
+      </div>
+      <div class="active-fines-list" id="active-fines-list"></div>
+    </div>
+
+    <!-- Fine Rules Breakdown Grid -->
+    <h3 style="font-size:17px;color:#14532d;margin-bottom:14px;">📋 KrishiX Official Fine & Compensation Rules</h3>
+    <div class="fine-grid" id="fine-rules-list"></div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 4: KOPARGAON LEADERBOARD
+  ══════════════════════════════════════════════════════════ -->
+  <section id="view-leaderboard" class="content-view">
+    <div class="sec-hdr">
+      <div>
+        <h2>🏆 Kopargaon Labour Leaderboard (सर्वोत्कृष्ट मजूर क्रमवारी)</h2>
+        <p>Ranked by KrishiX Trust Score (0–100), verified punctuality rate, and authentic Kopargaon farmer reviews.</p>
+      </div>
+      <button class="btn-voice" onclick="window.krishixApp?.speak('हे कोपरगाव मजूर लीडरबोर्ड आहे. पहिल्या तीन स्थानावरील मजुरांना शेतकऱ्यांनी सर्वोत्तम रेटिंग दिले आहे.')">
+        🔊 लीडरबोर्ड ऐका
+      </button>
+    </div>
+
+    <!-- Trophy Podium: Top 3 -->
+    <h3 style="font-size:18px;margin-bottom:14px;color:#14532d;">🥇 Top 3 Kopargaon Workers</h3>
+    <div class="podium-grid" id="leaderboard-podium"></div>
+
+    <!-- Full Ranked List -->
+    <h3 style="font-size:18px;margin-bottom:14px;color:#14532d;">📋 Complete Kopargaon Worker Rankings</h3>
+    <div class="lb-list" id="leaderboard-list"></div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 5: PROFIT MAXIMIZER AI
+  ══════════════════════════════════════════════════════════ -->
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 5: PROFIT MAXIMIZER AI
+  ══════════════════════════════════════════════════════════ -->
+  <section id="view-profit" class="content-view">
+    
+    <!-- Section Header -->
+    <div class="sec-hdr" style="margin-bottom:20px;">
+      <div>
+        <div style="display:inline-flex;align-items:center;gap:6px;background:#dcfce7;color:#14532d;padding:4px 12px;border-radius:99px;font-size:12px;font-weight:700;margin-bottom:6px;">
+          💡 AGRICULTURAL DECISION CENTER
+        </div>
+        <h2 style="font-size:24px;color:#14532d;margin:0;">Profit Maximizer AI — Crop Selling Advisor</h2>
+        <p style="color:#64748b;font-size:14px;margin-top:2px;">Compare selling options, calculate expected net profit, analyze market risk, simulate scenarios, and execute your plan.</p>
+      </div>
+      <button class="btn-voice" onclick="window.krishixApp?.speakProfitAdvice()">
+        🔊 मराठीत ऐका
+      </button>
+    </div>
+
+    <!-- 10. FARMER PRIORITY SELECTOR -->
+    <div class="pm-priority-bar" style="background:#fff;border:1px solid #cbd5e1;border-radius:14px;padding:16px 20px;margin-bottom:20px;box-shadow:var(--sh1);">
+      <div style="font-size:13px;font-weight:700;color:#334155;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <span>🎯 What matters most for your harvest? (Farmer Priority)</span>
+        <span style="font-size:11px;color:#16a34a;font-weight:600;">Recommendation recalculates automatically</span>
+      </div>
+      <div class="priority-pills-group" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
+        <button class="priority-btn active" id="prio-max-profit" onclick="window.krishixApp?.setFarmerPriority('max-profit')">
+          💰 Maximum Profit
+        </button>
+        <button class="priority-btn" id="prio-min-risk" onclick="window.krishixApp?.setFarmerPriority('min-risk')">
+          🛡️ Minimum Risk
+        </button>
+        <button class="priority-btn" id="prio-fast-cash" onclick="window.krishixApp?.setFarmerPriority('fast-cash')">
+          ⚡ Fast Cash
+        </button>
+        <button class="priority-btn" id="prio-avoid-storage" onclick="window.krishixApp?.setFarmerPriority('avoid-storage')">
+          📦 Avoid Storage
+        </button>
+      </div>
+    </div>
+
+    <!-- 1. HERO — AI RECOMMENDATION -->
+    <div class="pm-hero-card" id="pm-hero-container" style="background:linear-gradient(145deg, #072b20 0%, #14532d 100%);color:#fff;padding:26px;border-radius:18px;margin-bottom:24px;box-shadow:0 10px 30px rgba(7,43,32,.25);border:1px solid rgba(255,255,255,.1);">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,.12);padding-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="background:#d97706;color:#fff;font-size:11px;font-weight:900;padding:4px 12px;border-radius:99px;letter-spacing:0.5px;">🏆 AI RECOMMENDED</span>
+          <span style="background:rgba(255,255,255,.15);color:#bbf7d0;font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;" id="pm-live-badge">🟢 Live Mandi & Weather Data</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:12px;color:#cbd5e1;">AI Confidence Score:</span>
+          <span style="background:rgba(34,197,94,.2);color:#4ade80;border:1px solid #22c55e;font-size:13px;font-weight:800;padding:3px 10px;border-radius:99px;" id="pm-hero-confidence">87%</span>
+        </div>
+      </div>
+
+      <!-- Crop & Location Summary Header -->
+      <div style="display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:#e2e8f0;margin-bottom:16px;background:rgba(0,0,0,.2);padding:10px 14px;border-radius:10px;">
+        <div>🌾 <strong>Crop:</strong> <span id="pm-hero-crop">Tomato (टोमॅटो)</span></div>
+        <div>⚖️ <strong>Quantity:</strong> <span id="pm-hero-qty">15 Tons (15,000 kg)</span></div>
+        <div>📍 <strong>Farm:</strong> <span id="pm-hero-location">Kolpewadi, Kopargaon</span></div>
+        <div>📅 <strong>Harvest Date:</strong> <span id="pm-hero-date">12 Aug 2026</span></div>
+        <div>🏪 <strong>Current Price:</strong> <span id="pm-hero-currprice" style="color:#fde047;font-weight:700;">₹15/kg</span></div>
+      </div>
+
+      <!-- Recommended Strategy Title -->
+      <div style="margin-bottom:16px;">
+        <div style="font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;font-weight:700;">Recommended Strategy</div>
+        <h2 style="font-size:22px;color:#fff;margin-top:4px;line-height:1.3;" id="pm-hero-strategy-title">
+          Store 5 Days → Shared Freight → Nashik APMC
+        </h2>
+      </div>
+
+      <!-- Key Metrics Box Grid -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px;">
+        <div style="background:rgba(0,0,0,.25);padding:14px;border-radius:10px;border-left:4px solid #4ade80;">
+          <div style="font-size:11px;color:#94a3b8;font-weight:600;">Expected Selling Price</div>
+          <div style="font-size:22px;font-weight:900;color:#fff;" id="pm-hero-exp-price">₹28 / kg</div>
+          <div style="font-size:11px;color:#4ade80;" id="pm-hero-price-growth">+86% vs local mandi</div>
+        </div>
+
+        <div style="background:rgba(0,0,0,.35);padding:14px;border-radius:10px;border-left:4px solid #22c55e;">
+          <div style="font-size:11px;color:#bbf7d0;font-weight:600;">Expected Net Profit</div>
+          <div style="font-size:26px;font-weight:900;color:#4ade80;" id="pm-hero-net-profit">₹3,81,400</div>
+          <div style="font-size:11px;color:#cbd5e1;">After all storage & transport costs</div>
+        </div>
+
+        <div style="background:rgba(0,0,0,.25);padding:14px;border-radius:10px;border-left:4px solid #f59e0b;">
+          <div style="font-size:11px;color:#94a3b8;font-weight:600;">Additional Profit vs Selling Today</div>
+          <div style="font-size:22px;font-weight:900;color:#fde047;" id="pm-hero-extra-profit">+₹42,500</div>
+          <div style="font-size:11px;color:#fcd34d;">By following AI plan</div>
+        </div>
+      </div>
+
+      <!-- CTA Buttons -->
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button class="btn-primary" style="background:#22c55e;color:#052e16;font-weight:800;padding:12px 24px;border-radius:10px;font-size:14px;" onclick="window.krishixApp?.scrollToActionPlan()">
+          ⚡ Start This Plan
+        </button>
+        <button class="btn-secondary" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);padding:12px 20px;border-radius:10px;font-size:14px;" onclick="window.krishixApp?.scrollToStrategies()">
+          📊 Compare Strategies
+        </button>
+      </div>
+    </div>
+
+    <!-- Dynamic Alert Banner if Simulated Market Shift -->
+    <div id="pm-shift-alert-banner" style="display:none;background:#fef3c7;border:1px solid #f59e0b;color:#92400e;padding:14px 18px;border-radius:12px;margin-bottom:24px;font-size:14px;line-height:1.5;">
+      <strong>⚠️ AI Recommendation Changed:</strong> Expected price growth in Nashik has slowed down due to high arrivals.
+      <br>
+      <span style="font-weight:700;">Previous:</span> Store 5 days → <span style="font-weight:700;">New Recommendation:</span> Sell within 2 days directly to <strong>Sanjivani Foods Processing @ ₹26/kg</strong> to protect your profit.
+    </div>
+
+    <!-- 2. PERSONALIZED INPUT PANEL ("My Situation") -->
+    <div style="background:#fff;border:1px solid #cbd5e1;border-radius:16px;padding:22px;margin-bottom:24px;box-shadow:var(--sh1);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+        <div>
+          <h3 style="font-size:17px;color:#14532d;margin:0;">⚙️ My Situation (Personalized Inputs)</h3>
+          <p style="font-size:12px;color:#64748b;margin-top:2px;">Adjust your harvest details to recalculate profit options.</p>
+        </div>
+        <button class="btn-primary" id="btn-recalculate-ai" style="background:#14532d;padding:9px 18px;font-size:13px;" onclick="window.krishixApp?.recalculateProfitAI()">
+          🔄 Recalculate with AI
+        </button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
+        <div class="form-group">
+          <label style="font-size:12px;font-weight:700;color:#334155;">Crop Type (पिक)</label>
+          <select id="pm-input-crop" onchange="window.krishixApp?.onCropInputChange()">
+            <option value="Tomato">🍅 Tomato (टोमॅटो)</option>
+            <option value="Onion">🧅 Onion (कांदा)</option>
+            <option value="Sugarcane">🌾 Sugarcane (ऊस)</option>
+            <option value="Wheat">🌾 Wheat (गहू)</option>
+            <option value="Soybeans">🫘 Soybeans (सोयाबीन)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label style="font-size:12px;font-weight:700;color:#334155;">Quantity (Tons / metric tons)</label>
+          <input type="number" id="pm-input-qty" value="15" min="1" max="500">
+        </div>
+
+        <div class="form-group">
+          <label style="font-size:12px;font-weight:700;color:#334155;">Farm Location</label>
+          <select id="pm-input-location">
+            <option value="Kolpewadi, Kopargaon">Kolpewadi, Kopargaon</option>
+            <option value="Sanjivani Factory Road, Kopargaon">Sanjivani Factory Road</option>
+            <option value="Rahata, Kopargaon">Rahata Road</option>
+            <option value="Takli, Kopargaon">Takli Village</option>
+            <option value="Yeola Road, Kopargaon">Yeola Border</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label style="font-size:12px;font-weight:700;color:#334155;">Harvest Date</label>
+          <input type="date" id="pm-input-harvest-date" value="2026-08-12">
+        </div>
+
+        <div class="form-group">
+          <label style="font-size:12px;font-weight:700;color:#334155;">Current Local Market Price (₹/unit)</label>
+          <input type="number" id="pm-input-curr-price" value="15" step="0.5">
+        </div>
+
+        <div class="form-group">
+          <label style="font-size:12px;font-weight:700;color:#334155;">Available Storage Facility</label>
+          <select id="pm-input-storage">
+            <option value="shirdi-cold">Cold Storage Shirdi (45% slots free)</option>
+            <option value="apmc-godown">APMC Kopargaon Warehouse</option>
+            <option value="on-farm">On-farm Shade Storage</option>
+            <option value="none">None (Sell Immediately)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label style="font-size:12px;font-weight:700;color:#334155;">Storage Cost (₹/kg/day or ₹/ton/day)</label>
+          <input type="number" id="pm-input-storage-cost" value="1.20" step="0.1">
+        </div>
+
+        <div class="form-group">
+          <label style="font-size:12px;font-weight:700;color:#334155;">Transport Availability</label>
+          <select id="pm-input-transport">
+            <option value="shared-freight">Shared Freight Pool Truck #12 (Save 40%)</option>
+            <option value="independent-van">Independent Pickup Van</option>
+            <option value="factory-loader">Direct Factory Loader Truck</option>
+            <option value="tractor">Self Tractor-Trolley</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label style="font-size:12px;font-weight:700;color:#334155;">Preferred Selling Destination</label>
+          <select id="pm-input-destination">
+            <option value="Nashik APMC">Nashik APMC Market</option>
+            <option value="Kopargaon APMC">Kopargaon Mandi</option>
+            <option value="Sanjivani Foods Direct">Sanjivani Foods (Direct Processor)</option>
+            <option value="Mumbai Vashi APMC">Mumbai Vashi APMC</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. THREE STRATEGY OPTIONS COMPARISON -->
+    <div id="section-strategies" style="margin-bottom:28px;">
+      <div style="margin-bottom:14px;">
+        <h3 style="font-size:18px;color:#14532d;margin:0;">📊 Compare Selling Strategies</h3>
+        <p style="font-size:13px;color:#64748b;margin-top:2px;">Compare profit, cost, risk, and timeline across three distinct strategies.</p>
+      </div>
+
+      <div class="strategies-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;" id="pm-strategies-container">
+        <!-- Dynamic JS rendering for 3 strategy cards -->
+      </div>
+    </div>
+
+    <!-- 11. PROFIT BREAKDOWN CARD -->
+    <div style="background:#fff;border:1px solid #cbd5e1;border-radius:16px;padding:22px;margin-bottom:28px;box-shadow:var(--sh1);" id="pm-breakdown-container">
+      <h3 style="font-size:17px;color:#14532d;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+        <span>💵 Itemized Net Profit Calculation</span>
+      </h3>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;">
+        <div style="display:flex;flex-direction:column;gap:10px;font-size:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;color:#334155;">
+            <span>Expected Revenue (<span id="pb-revenue-formula">15,000 kg × ₹28/kg</span>)</span>
+            <strong style="color:#16a34a;" id="pb-revenue-val">+₹4,20,000</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;color:#64748b;">
+            <span>− Storage Cost (<span id="pb-storage-formula">5 days @ ₹1.2/kg</span>)</span>
+            <span style="color:#dc2626;" id="pb-storage-val">−₹18,000</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;color:#64748b;">
+            <span>− Transport Cost (<span id="pb-transport-formula">Shared Freight Pool</span>)</span>
+            <span style="color:#dc2626;" id="pb-transport-val">−₹12,000</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;color:#64748b;">
+            <span>− Handling & Loading Fees</span>
+            <span style="color:#dc2626;" id="pb-handling-val">−₹5,000</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;color:#64748b;">
+            <span>− APMC Mandi Cess & Fees (1.5%)</span>
+            <span style="color:#dc2626;" id="pb-fees-val">−₹3,600</span>
+          </div>
+          <hr style="border:none;border-top:2px dashed #cbd5e1;margin:6px 0;">
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:18px;font-weight:800;color:#14532d;">
+            <span>NET PROFIT:</span>
+            <span style="font-size:26px;color:#15803d;" id="pb-net-profit-val">₹3,81,400</span>
+          </div>
+          <div style="text-align:right;font-size:12px;color:#16a34a;font-weight:700;" id="pb-diff-val">
+            +₹42,500 more than selling today
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. INTERACTIVE PRICE FORECAST -->
+    <div style="background:#fff;border:1px solid #cbd5e1;border-radius:16px;padding:22px;margin-bottom:28px;box-shadow:var(--sh1);">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+        <div>
+          <h3 style="font-size:17px;color:#14532d;margin:0;">📈 Market Price Forecast (Range Prediction)</h3>
+          <p style="font-size:12px;color:#64748b;margin-top:2px;">AI shows predicted price range band rather than exact guess.</p>
+        </div>
+        
+        <!-- Horizon Pills -->
+        <div class="pill-group" style="background:#f1f5f9;padding:4px;border-radius:99px;" id="pm-forecast-horizon">
+          <button class="pill-btn active" onclick="window.krishixApp?.setForecastHorizon(5, this)">5 Days</button>
+          <button class="pill-btn" onclick="window.krishixApp?.setForecastHorizon(7, this)">7 Days</button>
+          <button class="pill-btn" onclick="window.krishixApp?.setForecastHorizon(14, this)">14 Days</button>
+          <button class="pill-btn" onclick="window.krishixApp?.setForecastHorizon(30, this)">30 Days</button>
+        </div>
+      </div>
+
+      <!-- Forecast Metrics Header -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px;background:#f8fafc;padding:12px 16px;border-radius:10px;">
+        <div>
+          <div style="font-size:11px;color:#64748b;">Current Mandi Price</div>
+          <div style="font-size:16px;font-weight:800;color:#334155;" id="fc-curr-price">₹15 / kg</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:#64748b;">Predicted Average</div>
+          <div style="font-size:16px;font-weight:800;color:#16a34a;" id="fc-pred-price">₹28 / kg</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:#64748b;">Expected Range</div>
+          <div style="font-size:16px;font-weight:800;color:#0284c7;" id="fc-range-price">₹26 – ₹30 / kg</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:#64748b;">Trend Direction</div>
+          <div style="font-size:16px;font-weight:800;color:#16a34a;" id="fc-trend-dir">📈 Rising (+86%)</div>
+        </div>
+      </div>
+
+      <!-- SVG Chart Canvas Area -->
+      <div style="width:100%;height:220px;position:relative;" id="pm-forecast-chart-wrap">
+        <svg id="pm-forecast-svg" style="width:100%;height:100%;overflow:visible;"></svg>
+      </div>
+    </div>
+
+    <!-- 5. PROFIT SIMULATOR ("What If?") -->
+    <div style="background:#fff;border:1px solid #cbd5e1;border-radius:16px;padding:22px;margin-bottom:28px;box-shadow:var(--sh1);">
+      <div style="margin-bottom:16px;">
+        <h3 style="font-size:17px;color:#14532d;margin:0;">🎛️ Interactive "What If?" Profit Simulator</h3>
+        <p style="font-size:12px;color:#64748b;margin-top:2px;">Slide values to immediately calculate net profit across custom conditions.</p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;">
+        <!-- Controls Column -->
+        <div style="display:flex;flex-direction:column;gap:14px;background:#f8fafc;padding:16px;border-radius:12px;border:1px solid #e2e8f0;">
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:#334155;margin-bottom:4px;">
+              <span>Storage Days</span>
+              <span id="sim-val-days" style="color:#16a34a;">5 Days</span>
+            </div>
+            <input type="range" id="sim-range-days" min="0" max="30" value="5" style="width:100%;accent-color:#16a34a;" oninput="window.krishixApp?.updateProfitSimulator()">
+          </div>
+
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:#334155;margin-bottom:4px;">
+              <span>Selling Price (₹/kg)</span>
+              <span id="sim-val-price" style="color:#16a34a;">₹28.0 / kg</span>
+            </div>
+            <input type="range" id="sim-range-price" min="10" max="60" value="28" step="0.5" style="width:100%;accent-color:#16a34a;" oninput="window.krishixApp?.updateProfitSimulator()">
+          </div>
+
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:#334155;margin-bottom:4px;">
+              <span>Transport Cost (₹/Ton)</span>
+              <span id="sim-val-transport" style="color:#334155;">₹800 / Ton</span>
+            </div>
+            <input type="range" id="sim-range-transport" min="300" max="2500" value="800" step="50" style="width:100%;accent-color:#16a34a;" oninput="window.krishixApp?.updateProfitSimulator()">
+          </div>
+
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:#334155;margin-bottom:4px;">
+              <span>Storage Cost (₹/kg/day)</span>
+              <span id="sim-val-storage" style="color:#334155;">₹1.20 / kg / day</span>
+            </div>
+            <input type="range" id="sim-range-storage" min="0" max="3" value="1.2" step="0.1" style="width:100%;accent-color:#16a34a;" oninput="window.krishixApp?.updateProfitSimulator()">
+          </div>
+
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:#334155;margin-bottom:4px;">
+              <span>Crop Quantity (Tons)</span>
+              <span id="sim-val-qty" style="color:#334155;">15 Tons</span>
+            </div>
+            <input type="range" id="sim-range-qty" min="1" max="50" value="15" step="1" style="width:100%;accent-color:#16a34a;" oninput="window.krishixApp?.updateProfitSimulator()">
+          </div>
+        </div>
+
+        <!-- Output Column -->
+        <div style="background:linear-gradient(135deg,#072b20 0%,#14532d 100%);color:#fff;padding:22px;border-radius:14px;display:flex;flex-direction:column;justify-content:space-between;">
+          <div>
+            <span style="background:rgba(255,255,255,.15);color:#bbf7d0;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;">SIMULATED OUTCOME</span>
+            <div style="margin-top:16px;font-size:13px;color:#cbd5e1;">Simulated Net Profit</div>
+            <div style="font-size:32px;font-weight:900;color:#4ade80;margin-top:2px;" id="sim-output-net-profit">₹3,81,400</div>
+            <div style="font-size:13px;color:#fde047;font-weight:700;margin-top:4px;" id="sim-output-diff">
+              ₹42,500 more than selling today
+            </div>
+          </div>
+
+          <div style="background:rgba(0,0,0,.3);padding:14px;border-radius:10px;margin-top:20px;font-size:13px;display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;justify-content:space-between;">
+              <span style="color:#94a3b8;">Gross Revenue:</span>
+              <strong id="sim-out-rev">₹4,20,000</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;">
+              <span style="color:#94a3b8;">Total Costs:</span>
+              <span style="color:#fca5a5;" id="sim-out-costs">−₹38,600</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. RISK ANALYSIS PANEL -->
+    <div style="background:#fff;border:1px solid #cbd5e1;border-radius:16px;padding:22px;margin-bottom:28px;box-shadow:var(--sh1);">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+        <div>
+          <h3 style="font-size:17px;color:#14532d;margin:0;">🛡️ Risk Analysis</h3>
+          <p style="font-size:12px;color:#64748b;margin-top:2px;">Evaluated risk factors across 6 agricultural & market variables.</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:13px;font-weight:700;color:#334155;">Overall Risk:</span>
+          <span style="background:#dcfce7;color:#15803d;font-weight:800;padding:4px 12px;border-radius:99px;font-size:13px;border:1px solid #86efac;" id="pm-overall-risk">LOW–MEDIUM</span>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px 14px;border-radius:10px;">
+          <div style="font-size:11px;color:#64748b;margin-bottom:4px;">Price Risk</div>
+          <div style="font-weight:700;font-size:14px;color:#d97706;" id="risk-price">🟡 Medium Risk</div>
+          <div style="font-size:11px;color:#64748b;margin-top:2px;">Price expected to peak in 5 days</div>
+        </div>
+
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px 14px;border-radius:10px;">
+          <div style="font-size:11px;color:#64748b;margin-bottom:4px;">Weather Risk</div>
+          <div style="font-weight:700;font-size:14px;color:#16a34a;" id="risk-weather">🟢 Low Risk</div>
+          <div style="font-size:11px;color:#64748b;margin-top:2px;">Clear skies, 10% rain chance</div>
+        </div>
+
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px 14px;border-radius:10px;">
+          <div style="font-size:11px;color:#64748b;margin-bottom:4px;">Storage Risk</div>
+          <div style="font-weight:700;font-size:14px;color:#16a34a;" id="risk-storage">🟢 Low Risk</div>
+          <div style="font-size:11px;color:#64748b;margin-top:2px;">4°C Cold Storage slot confirmed</div>
+        </div>
+
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px 14px;border-radius:10px;">
+          <div style="font-size:11px;color:#64748b;margin-bottom:4px;">Transport Risk</div>
+          <div style="font-weight:700;font-size:14px;color:#16a34a;" id="risk-transport">🟢 Low Risk</div>
+          <div style="font-size:11px;color:#64748b;margin-top:2px;">Shared truck #12 reserved</div>
+        </div>
+
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px 14px;border-radius:10px;">
+          <div style="font-size:11px;color:#64748b;margin-bottom:4px;">Buyer Risk</div>
+          <div style="font-weight:700;font-size:14px;color:#16a34a;" id="risk-buyer">🟢 Low Risk</div>
+          <div style="font-size:11px;color:#64748b;margin-top:2px;">APMC verified traders & processors</div>
+        </div>
+
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px 14px;border-radius:10px;">
+          <div style="font-size:11px;color:#64748b;margin-bottom:4px;">Market Crash Risk</div>
+          <div style="font-weight:700;font-size:14px;color:#16a34a;" id="risk-crash">🟢 Low Risk</div>
+          <div style="font-size:11px;color:#64748b;margin-top:2px;">Arrivals normal (18/100 index)</div>
+        </div>
+      </div>
+      <p style="font-size:11px;color:#94a3b8;margin-top:12px;">* All risk levels are estimated AI predictions based on live weather data and APMC mandi arrivals.</p>
+    </div>
+
+    <!-- 7. WHY AI RECOMMENDS THIS -->
+    <div style="background:#fff;border:1px solid #cbd5e1;border-radius:16px;padding:22px;margin-bottom:28px;box-shadow:var(--sh1);">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="window.krishixApp?.toggleWhySection()">
+        <h3 style="font-size:17px;color:#14532d;margin:0;display:flex;align-items:center;gap:8px;">
+          <span>🔍 Why this recommendation?</span>
+        </h3>
+        <span id="why-toggle-icon" style="font-weight:700;color:#64748b;">▼</span>
+      </div>
+
+      <div id="why-factors-list" style="margin-top:16px;display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;padding:10px 14px;border-radius:8px;font-size:13px;">
+          <span>📈 <strong>Market Trend:</strong> Nashik APMC price expected to rise +₹13/kg in next 5 days</span>
+          <span style="background:#dcfce7;color:#15803d;font-weight:700;padding:2px 8px;border-radius:99px;font-size:11px;">High Positive Impact</span>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;padding:10px 14px;border-radius:8px;font-size:13px;">
+          <span>🌤️ <strong>Weather:</strong> 0% rain forecast for next 7 days in Kopargaon & Nashik</span>
+          <span style="background:#dcfce7;color:#15803d;font-weight:700;padding:2px 8px;border-radius:99px;font-size:11px;">Low Risk</span>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;padding:10px 14px;border-radius:8px;font-size:13px;">
+          <span>🧊 <strong>Storage Availability:</strong> Shirdi Cold Storage has 45% slots open @ ₹1.2/kg</span>
+          <span style="background:#dcfce7;color:#15803d;font-weight:700;padding:2px 8px;border-radius:99px;font-size:11px;">High Positive Impact</span>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;padding:10px 14px;border-radius:8px;font-size:13px;">
+          <span>📊 <strong>Buyer Demand:</strong> Sanjivani Foods & 4 APMC traders actively buying bulk</span>
+          <span style="background:#dcfce7;color:#15803d;font-weight:700;padding:2px 8px;border-radius:99px;font-size:11px;">High Positive Impact</span>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;padding:10px 14px;border-radius:8px;font-size:13px;">
+          <span>🚛 <strong>Transport Cost:</strong> Shared Freight Pool Truck #12 available (saves ₹800/ton)</span>
+          <span style="background:#fef3c7;color:#b45309;font-weight:700;padding:2px 8px;border-radius:99px;font-size:11px;">Medium Positive Impact</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8. AI ACTION PLAN TIMELINE -->
+    <div id="section-action-plan" style="background:#fff;border:1px solid #cbd5e1;border-radius:16px;padding:22px;margin-bottom:28px;box-shadow:var(--sh1);">
+      <div style="margin-bottom:18px;">
+        <h3 style="font-size:18px;color:#14532d;margin:0;">🗺️ Executable Action Plan Timeline</h3>
+        <p style="font-size:13px;color:#64748b;margin-top:2px;">Step-by-step action plan to execute your AI recommendation.</p>
+      </div>
+
+      <div class="action-timeline" style="display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;align-items:center;gap:16px;background:#f8fafc;border:1px solid #e2e8f0;padding:14px;border-radius:12px;flex-wrap:wrap;">
+          <div style="background:#14532d;color:#fff;font-weight:900;font-size:16px;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">01</div>
+          <div style="flex-grow:1;">
+            <div style="font-weight:700;font-size:14px;color:#1e293b;">Reserve Cold Storage</div>
+            <div style="font-size:12px;color:#64748b;">Shirdi Cold Care — 15 Tons reserved slot</div>
+          </div>
+          <button class="btn-primary" style="background:#14532d;font-size:12px;padding:8px 14px;" onclick="window.krishixApp?.executeActionStep('storage')">
+            [Reserve Storage]
+          </button>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:16px;background:#f8fafc;border:1px solid #e2e8f0;padding:14px;border-radius:12px;flex-wrap:wrap;">
+          <div style="background:#14532d;color:#fff;font-weight:900;font-size:16px;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">02</div>
+          <div style="flex-grow:1;">
+            <div style="font-weight:700;font-size:14px;color:#1e293b;">Book Shared Freight Pool</div>
+            <div style="font-size:12px;color:#64748b;">Freight Pool Truck #12 (Kopargaon → Nashik APMC)</div>
+          </div>
+          <button class="btn-primary" style="background:#14532d;font-size:12px;padding:8px 14px;" onclick="window.krishixApp?.executeActionStep('truck')">
+            [Book Truck]
+          </button>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:16px;background:#f8fafc;border:1px solid #e2e8f0;padding:14px;border-radius:12px;flex-wrap:wrap;">
+          <div style="background:#14532d;color:#fff;font-weight:900;font-size:16px;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">03</div>
+          <div style="flex-grow:1;">
+            <div style="font-weight:700;font-size:14px;color:#1e293b;">Store Crop & Track Quality</div>
+            <div style="font-size:12px;color:#64748b;">5 days holding period with quality insurance</div>
+          </div>
+          <button class="btn-secondary" style="font-size:12px;padding:8px 14px;" onclick="window.krishixApp?.executeActionStep('quality')">
+            [Set Quality Alert]
+          </button>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:16px;background:#f8fafc;border:1px solid #e2e8f0;padding:14px;border-radius:12px;flex-wrap:wrap;">
+          <div style="background:#14532d;color:#fff;font-weight:900;font-size:16px;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">04</div>
+          <div style="flex-grow:1;">
+            <div style="font-weight:700;font-size:14px;color:#1e293b;">Monitor Market Prices</div>
+            <div style="font-size:12px;color:#64748b;">AI Market Watch auto-monitors mandi price spikes</div>
+          </div>
+          <button class="btn-secondary" style="font-size:12px;padding:8px 14px;" onclick="window.krishixApp?.executeActionStep('alert')">
+            [Set Price Alert]
+          </button>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:16px;background:#f8fafc;border:1px solid #e2e8f0;padding:14px;border-radius:12px;flex-wrap:wrap;">
+          <div style="background:#14532d;color:#fff;font-weight:900;font-size:16px;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">05</div>
+          <div style="flex-grow:1;">
+            <div style="font-weight:700;font-size:14px;color:#1e293b;">Sell to Recommended Buyer / APMC</div>
+            <div style="font-size:12px;color:#64748b;">Deliver to Nashik APMC / Sanjivani Foods for final payout</div>
+          </div>
+          <button class="btn-primary" style="background:#d97706;font-size:12px;padding:8px 14px;" onclick="window.krishixApp?.executeActionStep('buyer')">
+            [View Buyer Contract]
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 9. SMART ALERT SYSTEM ("AI Market Watch") -->
+    <div style="background:#fff;border:1px solid #cbd5e1;border-radius:16px;padding:22px;margin-bottom:20px;box-shadow:var(--sh1);">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+        <div>
+          <h3 style="font-size:17px;color:#14532d;margin:0;">🔔 AI Market Watch System</h3>
+          <p style="font-size:12px;color:#64748b;margin-top:2px;">Get instant alerts if mandi conditions change or profit drops.</p>
+        </div>
+        <span style="background:#dcfce7;color:#15803d;font-weight:700;padding:4px 12px;border-radius:99px;font-size:12px;border:1px solid #86efac;" id="pm-watch-status">
+          🔔 Monitoring Active
+        </span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:16px;">
+        <div style="background:#f8fafc;padding:12px;border-radius:10px;border:1px solid #e2e8f0;">
+          <label style="font-size:12px;font-weight:700;color:#334155;display:block;margin-bottom:4px;">Price Drop Alert (₹/kg)</label>
+          <input type="number" id="pm-alert-min-price" value="24" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;">
+        </div>
+        <div style="background:#f8fafc;padding:12px;border-radius:10px;border:1px solid #e2e8f0;">
+          <label style="font-size:12px;font-weight:700;color:#334155;display:block;margin-bottom:4px;">Profit Protection Alert (₹)</label>
+          <input type="number" id="pm-alert-min-profit" value="300000" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;">
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button class="btn-primary" style="background:#14532d;font-size:13px;" onclick="window.krishixApp?.activateMarketWatch()">
+          🔔 Save Price Alerts
+        </button>
+        <button class="btn-secondary" style="font-size:13px;" onclick="window.krishixApp?.toggleMarketShiftSimulation()">
+          🧪 Simulate Market Condition Shift
+        </button>
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 6: FARM OPERATIONS PLANNER
+  ══════════════════════════════════════════════════════════ -->
+  <section id="view-planner" class="content-view">
+    <div class="sec-hdr">
+      <div>
+        <h2>🌱 Smart Farm Operations Planner</h2>
+        <p>Select crop type & acreage. KrishiX creates a complete farming timeline and recommends labour squads & machinery.</p>
+      </div>
+    </div>
+
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px;margin-bottom:20px;box-shadow:var(--sh1);">
+      <div class="form-row" style="margin-bottom:16px;">
+        <div class="form-group">
+          <label>Crop Type (पिक)</label>
+          <select id="planner-crop">
+            <option value="Tomato">🍅 Tomato (टोमॅटो)</option>
+            <option value="Sugarcane">🌾 Sugarcane (ऊस)</option>
+            <option value="Onion">🧅 Onion (कांदा)</option>
+            <option value="Wheat">🌾 Wheat (गहू)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Land Area (Acres)</label>
+          <input type="number" id="planner-acres" value="4" min="1" max="50">
+        </div>
+        <div class="form-group">
+          <label>Sowing / Planting Date</label>
+          <input type="date" id="planner-date" value="2026-08-05">
+        </div>
+      </div>
+      <button class="btn-primary" style="width:100%;justify-content:center;padding:12px;" onclick="window.krishixApp?.renderFarmPlan()">
+        ✨ Generate Complete Farm Operations Schedule
+      </button>
+    </div>
+
+    <div id="planner-stages" style="display:flex;flex-direction:column;gap:14px;margin-bottom:24px;"></div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 7: MACHINERY BOOKING
+  ══════════════════════════════════════════════════════════ -->
+  <section id="view-machinery" class="content-view">
+    <div class="sec-hdr">
+      <div>
+        <h2>🚜 Rent Machinery in Kopargaon</h2>
+        <p>Verified tractors, combine harvesters, and spray drones ready for dispatch near your farm.</p>
+      </div>
+    </div>
+    <div class="mach-grid" id="machinery-grid"></div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 8: LIVE GPS TRACKING
+  ══════════════════════════════════════════════════════════ -->
+  <section id="view-tracking" class="content-view">
+    <div class="sec-hdr" style="margin-bottom:14px;">
+      <div>
+        <h2 id="tracking-hdr-title" data-i18n="hdr-tracking">📍 Real-Time Live Dispatch GPS Map (Kopargaon)</h2>
+        <p id="tracking-hdr-sub">Select active booking below to track live machinery & labour squad dispatch in real-time.</p>
+      </div>
+      <button class="btn-voice" onclick="window.krishixApp?.speak('आपले ट्रॅक्टर व ड्रोन कोपरगाव शेताकडे येत आहे.')">
+        🔊 स्टेटस ऐका
+      </button>
+    </div>
+
+    <!-- Active Booking Selector Bar -->
+    <div style="background:#fff; border:1px solid #cbd5e1; border-radius:12px; padding:12px 18px; margin-bottom:18px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; box-shadow:var(--sh1);">
+      <div style="display:flex; align-items:center; gap:10px; flex-grow:1;">
+        <span style="font-weight:800; color:#14532d; font-size:14px; white-space:nowrap;">📡 Track Active Booking:</span>
+        <select id="tracking-booking-select" style="flex-grow:1; max-width:540px; padding:9px 14px; border-radius:8px; border:1px solid #16a34a; font-weight:700; color:#14532d; background:#f0fdf4;" onchange="window.krishixTracker?.updateTrackingTarget(this.value)">
+          <option value="KX-KPG-9042">🚜 Mahindra Arjun 605 DI Tractor (MH 17 CD 5821) — Kolpewadi Field #4</option>
+          <option value="KX-KPG-7712">🌾 John Deere 5050D Combine Harvester (MH 17 AZ 9921) — Shingnapur Field #2</option>
+          <option value="KX-KPG-3389">🚁 AgriDron 20L Precision Spray Drone (GODAVARI-DRONE-01) — Takli Orchard</option>
+          <option value="KX-KPG-5510">🚐 Sugarcane Harvest Labour Squad (MH 17 BK 4410) — Dhamori Field #1</option>
+        </select>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn-outline" style="padding:7px 14px; font-size:12px;" onclick="window.krishixTracker?.initMap()">
+          🔄 Refresh GPS Signal
+        </button>
+      </div>
+    </div>
+
+    <div class="track-grid">
+      <div class="map-wrap">
+        <div id="leaflet-map"></div>
+      </div>
+
+      <div class="dispatch-panel">
+        <div class="eta-box">
+          <div class="eta-lbl">⏱️ Estimated Arrival (Kopargaon Farm)</div>
+          <div class="eta-time" id="live-eta-timer">06:30</div>
+          <div class="eta-sub" id="live-distance-km">1.8 km remaining • Moving at 30 km/h in Kopargaon</div>
+        </div>
+
+        <div class="driver-strip">
+          <div class="driver-avatar">👨‍🌾</div>
+          <div style="flex:1;">
+            <div class="dname" id="tracking-driver-name">Raosaheb Patil</div>
+            <div class="dphone" id="tracking-driver-phone">📞 +91 98220 17482</div>
+            <div style="font-size:11px;color:#16a34a;font-weight:700;" id="tracking-driver-trust">🛡️ Trust Score 98/100 • MH 17 CD 5821</div>
+          </div>
+          <button class="btn-call-circ" onclick="alert('Calling Driver: ' + (document.getElementById('tracking-driver-name')?.textContent || 'Raosaheb Patil'))">📞</button>
+        </div>
+
+        <div class="status-track">
+          <div class="st-step done">
+            <div class="st-title">✓ Order Confirmed & Escrow Locked</div>
+            <div class="st-desc" id="tracking-dest-step">Booked for Kolpewadi Field #4</div>
+          </div>
+          <div class="st-step done">
+            <div class="st-title">✓ Dispatched from Kopargaon Yard</div>
+            <div class="st-desc">Left at 07:15 AM</div>
+          </div>
+          <div class="st-step live">
+            <div class="st-title">🚚 En Route via Kopargaon Road</div>
+            <div class="st-desc">Passing Kopargaon Canal</div>
+          </div>
+          <div class="st-step">
+            <div class="st-title">🌾 Arrival & Gate Check-in</div>
+            <div class="st-desc">Gate arrival & work start</div>
+          </div>
+        </div>
+
+        <button class="btn-green" style="margin-top:auto;" onclick="window.krishixTracker?.togglePause()">
+          ⏸️ Pause / Resume GPS Movement
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 9: MY BOOKED JOBS
+  ══════════════════════════════════════════════════════════ -->
+  <section id="view-schedule" class="content-view">
+    <div class="sec-hdr">
+      <div>
+        <h2>📅 My Booked Farm Jobs</h2>
+        <p>All confirmed labour squad and machinery bookings.</p>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;" id="schedule-list"></div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 10: WALLET & PAYMENTS
+  ══════════════════════════════════════════════════════════ -->
+  <section id="view-payment" class="content-view">
+    <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;">
+      <div style="background:#fff;padding:24px;border-radius:12px;border:1px solid #e2e8f0;box-shadow:var(--sh1);">
+        <h2 style="font-size:20px;color:#14532d;margin-bottom:14px;font-weight:800;">💳 KrishiX Wallet & Payments</h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+          <div style="background:#f0fdf4;padding:18px;border-radius:10px;border:1px solid #16a34a;">
+            <div id="wallet-balance-val" style="font-size:32px;font-weight:900;color:#14532d;">₹4,850</div>
+            <div style="font-size:13px;color:#15803d;font-weight:700;">Wallet Balance</div>
+          </div>
+          <div style="background:#fffbeb;padding:18px;border-radius:10px;border:1px solid #d97706;">
+            <div style="font-size:32px;font-weight:900;color:#78350f;">₹10,800</div>
+            <div style="font-size:13px;color:#b45309;font-weight:700;">Season Savings</div>
+          </div>
+        </div>
+
+        <h3 style="font-size:15px;margin-bottom:12px;color:#14532d;">Recent Payment History</h3>
+        <div style="display:flex;flex-direction:column;gap:10px;" id="payment-history"></div>
+      </div>
+
+      <div style="background:#fff;padding:22px;border-radius:12px;border:1px solid #e2e8f0;text-align:center;box-shadow:var(--sh1);">
+        <h3 style="font-size:16px;color:#14532d;margin-bottom:8px;">📱 Add Money via UPI</h3>
+        <p style="font-size:12px;color:#64748b;margin-bottom:12px;">Scan with GPay, PhonePe, or Paytm</p>
+        <div class="upi-box">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=krishix@bank&pn=KrishiX%20Agro" alt="UPI QR Code">
+          <div style="font-weight:800;color:#14532d;margin-top:6px;">UPI ID: krishix@bank</div>
+        </div>
+        <button class="btn-primary" style="width:100%;justify-content:center;" onclick="window.krishixApp?.simulateAddMoney()">
+          + Add ₹1,000 to Wallet
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION 11: PROVIDER DASHBOARD
+  ══════════════════════════════════════════════════════════ -->
+  <section id="view-provider" class="content-view">
+    <div class="dash-grid">
+      <div class="stat-card"><div class="stat-icon">🚜</div><div><div class="stat-val">3</div><div class="stat-lbl">Machinery Listed</div></div></div>
+      <div class="stat-card"><div class="stat-icon">💰</div><div><div class="stat-val">₹24,600</div><div class="stat-lbl">Month Earnings</div></div></div>
+      <div class="stat-card"><div class="stat-icon">⭐</div><div><div class="stat-val">4.9/5</div><div class="stat-lbl">Farmer Rating</div></div></div>
+      <div class="stat-card"><div class="stat-icon">✅</div><div><div class="stat-val">38</div><div class="stat-lbl">Bookings Completed</div></div></div>
+    </div>
+
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:24px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2 style="font-size:18px;color:#14532d;">🚜 Manage Kopargaon Machinery List</h2>
+        <button class="btn-primary" onclick="alert('Add Equipment Form')">+ List New Machinery</button>
+      </div>
+      <p style="color:#64748b;font-size:13px;">Manage machine availability, rates, and incoming booking requests from Kopargaon farmers.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════ VIEW: AI CROP DOCTOR ═══════════════════════ -->
+  <section class="content-view" id="view-ai-doctor">
+    <div class="section-hdr">
+      <div>
+        <h2 data-i18n="hdr-doctor">🤖 AI Crop Health Doctor & Spraying Match</h2>
+        <p data-i18n="hdr-doctor-sub">Scan crop symptoms or upload diseased leaf photos. AI instantly diagnoses diseases and matches certified spraying squads in Kopargaon.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 380px 1fr; gap:24px; align-items:start;">
+      <!-- Diagnostic Form -->
+      <div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:22px; box-shadow:var(--sh1);">
+        <h3 style="color:#14532d; font-size:17px; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+          <span>🌾</span> Select Crop & Upload Damage Photo
+        </h3>
+        
+        <div class="form-group" style="margin-bottom:14px;">
+          <label style="font-weight:700; color:#334155;">Crop Name (पिकाचे नाव) *</label>
+          <select id="ai-crop-select" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #cbd5e1; font-size:14px; background:#fff;">
+            <option value="sugarcane">🌾 Sugarcane (ऊस)</option>
+            <option value="onion">🧅 Onion (कांदा)</option>
+            <option value="pomegranate">🍎 Pomegranate (डाळिंब)</option>
+            <option value="grape">🍇 Grape (द्राक्ष)</option>
+            <option value="wheat">🌾 Wheat (गहू)</option>
+            <option value="maize">🌽 Maize / Corn (मका)</option>
+            <option value="cotton">🪥 Cotton (कापूस)</option>
+            <option value="tomato">🍅 Tomato (टोमॅटो)</option>
+            <option value="chilli">🌶️ Chilli (मिरची)</option>
+            <option value="soybean">🫘 Soybean (सोयाबीन)</option>
+            <option value="bajra">🌾 Bajra / Jowar (बाजरी / ज्वारी)</option>
+            <option value="vegetables">🥬 Vegetables & Horticulture (भाजीपाला)</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom:14px;">
+          <label style="font-weight:700; color:#334155;">Observed Symptoms (लक्षणे) *</label>
+          <textarea id="ai-symptoms-text" rows="3" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #cbd5e1; font-size:13px;" placeholder="e.g. Yellowish cottony spots under leaves, dry leaf tips, stem discoloration..."></textarea>
+        </div>
+
+        <!-- Live Photo Upload & Scanner Box -->
+        <div class="form-group" style="margin-bottom:18px;">
+          <label style="font-weight:700; color:#334155;">Upload Leaf / Crop Damage Photo *</label>
+          <div style="background:#f8fafc; border:2px dashed #cbd5e1; border-radius:12px; padding:16px; text-align:center; position:relative; overflow:hidden;">
+            <div id="ai-photo-preview-wrap" style="width:100%; height:140px; border-radius:8px; overflow:hidden; background:#e2e8f0; margin-bottom:10px; display:none; position:relative;">
+              <img id="ai-photo-preview" src="" style="width:100%; height:100%; object-fit:cover;">
+              <div id="ai-scan-laser" style="position:absolute; top:0; left:0; width:100%; height:4px; background:#4ade80; box-shadow:0 0 12px #4ade80, 0 0 20px #22c55e; display:none;"></div>
+            </div>
+            
+            <input type="file" id="ai-photo-file" accept="image/*" style="display:none;" onchange="window.krishixApp?.handleAIDoctorPhotoUpload(event)">
+            <button type="button" class="btn-primary" style="padding:8px 16px; font-size:13px; background:#16a34a; margin:0 auto;" onclick="document.getElementById('ai-photo-file').click()">
+              📸 Choose Photo / Camera Scan
+            </button>
+            <div id="ai-photo-status-text" style="font-size:11px; color:#64748b; margin-top:8px;">Upload clear leaf photo for Gemini AI Vision analysis</div>
+          </div>
+        </div>
+
+        <button class="btn-primary" style="width:100%; justify-content:center; padding:13px; font-size:16px; background:#7c3aed; box-shadow:0 4px 12px rgba(124,58,237,0.3);" onclick="window.krishixApp?.runAIDiagnosis()">
+          🤖 Analyze with AI Doctor & Match Squad
+        </button>
+      </div>
+
+      <!-- AI Results Display & Agronomist Prescription Report -->
+      <div id="ai-result-box" style="background:#f8fafc; border:2px dashed #cbd5e1; border-radius:16px; padding:32px; min-height:480px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+        <div style="font-size:56px; margin-bottom:14px; animation:bounce 2s infinite;">🌱</div>
+        <h3 style="color:#1e293b; font-size:20px; font-weight:800; margin-bottom:8px;">Ready for AI Crop Scan</h3>
+        <p style="color:#64748b; font-size:14px; max-width:440px; line-height:1.6;">
+          Select your crop, describe symptoms, or upload a leaf damage photo. KrishiX AI will generate a complete <strong>Agronomist Medical Report</strong> with chemical & organic remedies and matched Kopargaon spray units.
+        </p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ═══════════════════════ MODAL OVERLAY ═══════════════════════ -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3 id="modal-title">Details</h3>
+      <button class="modal-close-btn" onclick="window.krishixApp?.closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ PROFILE DETAIL OVERLAY ═══════════════════════ -->
+<div class="detail-overlay" id="profile-detail-overlay"
+     onclick="if(event.target===this) window.krishixApp?.closeDetail()">
+  <div class="detail-card" id="profile-detail-card"></div>
+</div>
+
+<!-- ═══════════════════════ VOICE TOAST ═══════════════════════ -->
+<div class="voice-toast" id="voice-toast">
+  <span style="font-size:18px;">🔊</span>
+  <span id="toast-text"></span>
+</div>
+
+<!-- Scripts -->
+<script src="./data.js"></script>
+<script src="./api.js"></script>
+<script src="./map-tracker.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>
